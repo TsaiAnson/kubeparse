@@ -1,5 +1,5 @@
-# Update.go
-This file contains methods that modify deployment attributes. This is currently under development, and all instructions for completed methods will be found here.
+# update.go
+This file contains methods that modify deployment attributes through the kubernetes client-go. This is currently under development, and all instructions for completed methods will be found here.
 
 ### replicaUpdate
 This method updates the replica count of a specific deployment. The string argument `metaname` refers to the name of the deployment specified in the metadata. The string argument `magnitude` specifies how much the replica count will increase by. If a negative number is given, then the replica count will be decreased by `magnitude`. For an example, refer to the main function.
