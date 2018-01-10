@@ -118,5 +118,6 @@ func replicaUpdate(metaname string, magnitude string) {
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
+    // Unit test for replicaUpdate
     replicaUpdate("frontend", "-1")
 }
