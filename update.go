@@ -45,7 +45,7 @@ func replicaUpdate(metaname string, magnitude string) {
             panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
         }
 
-        fmt.Println("Updating replica count of %v by %v", metaname, magnitude)
+        fmt.Printf("Updating replica count of %v by %v\n", metaname, magnitude)
 
         // Parsing magnitude to int32
         i, err := strconv.ParseInt(magnitude, 10, 32)
@@ -65,7 +65,7 @@ func replicaUpdate(metaname string, magnitude string) {
     if retryErr != nil {
         panic(fmt.Errorf("Update failed: %v", retryErr))
     }
-    fmt.Println("Updated replica count of Deployment %v", metaname)
+    fmt.Printf("Updated replica count of Deployment %v\n", metaname)
 }
 
 // In-cluser UNTESTED ==========================================================
@@ -118,5 +118,5 @@ func replicaUpdate(metaname string, magnitude string) {
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
-    replicaUpdate("frontend", "1")
+    replicaUpdate("frontend", "-1")
 }
