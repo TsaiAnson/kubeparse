@@ -83,10 +83,37 @@ func replicaUpdate(clientset *kubernetes.Clientset, metaname string, quantity st
     fmt.Printf("Updated replica count of Deployment %v\n", metaname)
 }
 
+// Adds a label to node NODE
+func addLabel(clientset *kubernetes.Clientset, nodename string, labelkey string, labelvalue string) {
+    // Getting node
+    nodesClient := clientset.Core().Nodes()
+
+
+    // Updating deployment
+    retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+        result, getErr := nodesClient.Get(nodename, metav1.GetOptions{})
+        if getErr != nil {
+            panic(fmt.Errorf("Failed to get latest version of Node: %v", getErr))
+        }
+
+        fmt.Printf("Adding label %v:%v to node %v\n", labelkey, labelvalue, nodename)
+
+        // Modify labels
+        result.Labels[labelkey] = labelvalue
+        _, updateErr := nodesClient.Update(result)
+        return updateErr
+    })
+    if retryErr != nil {
+        panic(fmt.Errorf("Update failed: %v", retryErr))
+    }
+    fmt.Printf("Updated labels of node %v\n", nodename)
+}
+
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
     // Unit test for replicaUpdate
     testclient := getClientSetOut()
-    replicaUpdate(testclient, "frontend", "-1")
+    //replicaUpdate(testclient, "frontend", "-1")
+    addLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
 }
