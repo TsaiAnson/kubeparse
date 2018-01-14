@@ -88,8 +88,7 @@ func addLabel(clientset *kubernetes.Clientset, nodename string, labelkey string,
     // Getting node
     nodesClient := clientset.Core().Nodes()
 
-
-    // Updating deployment
+    // Updating node
     retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
         result, getErr := nodesClient.Get(nodename, metav1.GetOptions{})
         if getErr != nil {
@@ -109,11 +108,52 @@ func addLabel(clientset *kubernetes.Clientset, nodename string, labelkey string,
     fmt.Printf("Updated labels of node %v\n", nodename)
 }
 
+// Adds a nodeSelector to pod POD* (INCOMPLETE)
+func addNodeSel(clientset *kubernetes.Clientset, podname string, labelkey string, labelvalue string) {
+    // Getting pod
+    podsClient := clientset.Core().Pods(apiv1.NamespaceDefault)
+
+
+    // Since the nodeSelector field of a POD cannot be modified, we will have to
+    // delete and recreate the existing POD with the new nodeSelector
+    retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+        result, getErr := podsClient.Get(podname, metav1.GetOptions{})
+        if getErr != nil {
+            panic(fmt.Errorf("Failed to get latest version of Pod: %v", getErr))
+        }
+
+        fmt.Printf("Adding nodeSelector %v:%v to pod %v\n", labelkey, labelvalue, podname)
+
+        result.Spec.NodeName = labelkey
+        _, updateErr := podsClient.Update(result)
+        return updateErr
+
+        // // Modify labels
+        // if result.Spec.NodeSelector == nil {
+        //     result.Spec.NodeSelector = make(map[string]string)
+        // }
+        // result.Spec.NodeSelector[labelkey] = labelvalue
+        //
+        // deleteErr := podsClient.Delete(podname, &metav1.DeleteOptions{})
+        // if deleteErr != nil {
+        //     panic(fmt.Errorf("Failed to delete oldPod: %v", deleteErr))
+        // }
+        //
+        // _, createErr := podsClient.Create(result)
+        // return createErr
+    })
+    if retryErr != nil {
+        panic(fmt.Errorf("Update failed: %v", retryErr))
+    }
+    fmt.Printf("Updated nodeSelectors of pod %v\n", podname)
+}
+
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
     // Unit test for replicaUpdate
     testclient := getClientSetOut()
     //replicaUpdate(testclient, "frontend", "-1")
-    addLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
+    //addLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
+    addNodeSel(testclient, "frontend-1768566195-ct0qb", "ip-172-20-46-58.us-west-1.compute.internal", "8")
 }
