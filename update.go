@@ -84,7 +84,7 @@ func replicaUpdate(clientset *kubernetes.Clientset, metaname string, quantity st
 }
 
 // Adds a label to node NODE
-func addLabel(clientset *kubernetes.Clientset, nodename string, labelkey string, labelvalue string) {
+func addNodeLabel(clientset *kubernetes.Clientset, nodename string, labelkey string, labelvalue string) {
     // Getting node
     nodesClient := clientset.Core().Nodes()
 
@@ -148,12 +148,31 @@ func addNodeSel(clientset *kubernetes.Clientset, podname string, labelkey string
     fmt.Printf("Updated nodeSelectors of pod %v\n", podname)
 }
 
+func deleteNode(clientset *kubernetes.Clientset, nodename string) {
+    // Getting node
+    nodesClient := clientset.Core().Nodes()
+
+    // Deleting node
+    retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+        fmt.Printf("Deleting node %v\n", nodename)
+
+        // Delete node
+        deleteErr := nodesClient.Delete(nodename, &metav1.DeleteOptions{})
+        return deleteErr
+    })
+    if retryErr != nil {
+        panic(fmt.Errorf("Delete failed: %v", retryErr))
+    }
+    fmt.Printf("Deleted node %v\n", nodename)
+}
+
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
     // Unit test for replicaUpdate
     testclient := getClientSetOut()
     //replicaUpdate(testclient, "frontend", "-1")
-    //addLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
-    addNodeSel(testclient, "frontend-1768566195-ct0qb", "ip-172-20-46-58.us-west-1.compute.internal", "8")
+    //addNodeLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
+    //addNodeSel(testclient, "frontend-1768566195-ct0qb", "ip-172-20-46-58.us-west-1.compute.internal", "8")
+    deleteNode(testclient, "ip-172-20-38-51.us-west-1.compute.internal")
 }
