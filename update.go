@@ -108,44 +108,77 @@ func addNodeLabel(clientset *kubernetes.Clientset, nodename string, labelkey str
     fmt.Printf("Updated labels of node %v\n", nodename)
 }
 
-// Adds a nodeSelector to pod POD* (INCOMPLETE)
-func addNodeSel(clientset *kubernetes.Clientset, podname string, labelkey string, labelvalue string) {
-    // Getting pod
-    podsClient := clientset.Core().Pods(apiv1.NamespaceDefault)
+// Adds a nodeSelector to deployment (Works, but INCOMPLETE)
+/*
+    Assigning nodeSelectors to running PODS is not supported, so the only way to
+    add a nodeSelector through client-go would be to place it on a whole deployment.
+    However, this causes all replicas of that deployment to have that same nodeSelector.
+*/
+func addNodeSel(clientset *kubernetes.Clientset, name string, labelkey string, labelvalue string) {
+    // Getting deployments
+    deploymentsClient := clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
 
-
-    // Since the nodeSelector field of a POD cannot be modified, we will have to
-    // delete and recreate the existing POD with the new nodeSelector
+    // Updating deployment
     retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-        result, getErr := podsClient.Get(podname, metav1.GetOptions{})
+        // Retrieve the latest version of Deployment before attempting update
+        // RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
+        result, getErr := deploymentsClient.Get(name, metav1.GetOptions{})
         if getErr != nil {
-            panic(fmt.Errorf("Failed to get latest version of Pod: %v", getErr))
+            panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
         }
 
-        fmt.Printf("Adding nodeSelector %v:%v to pod %v\n", labelkey, labelvalue, podname)
+        fmt.Printf("Updating nodeSelector of deployment %v\n", name)
 
-        result.Spec.NodeName = labelkey
-        _, updateErr := podsClient.Update(result)
-        return updateErr
+        // Modifying nodeSelectors
+        if result.Spec.Template.Spec.NodeSelector == nil {
+            result.Spec.Template.Spec.NodeSelector = make(map[string]string)
+        }
+        result.Spec.Template.Spec.NodeSelector[labelkey] = labelvalue
 
-        // // Modify labels
-        // if result.Spec.NodeSelector == nil {
-        //     result.Spec.NodeSelector = make(map[string]string)
-        // }
-        // result.Spec.NodeSelector[labelkey] = labelvalue
-        //
-        // deleteErr := podsClient.Delete(podname, &metav1.DeleteOptions{})
-        // if deleteErr != nil {
-        //     panic(fmt.Errorf("Failed to delete oldPod: %v", deleteErr))
-        // }
-        //
-        // _, createErr := podsClient.Create(result)
-        // return createErr
+        _, updateErr := deploymentsClient.Update(result)
+        return  updateErr
     })
     if retryErr != nil {
         panic(fmt.Errorf("Update failed: %v", retryErr))
     }
-    fmt.Printf("Updated nodeSelectors of pod %v\n", podname)
+    fmt.Printf("Updated labels of deployment %v\n", name)
+
+    // // Getting pod
+    // podsClient := clientset.Core().Pods(apiv1.NamespaceDefault)
+    //
+    //
+    // // Since the nodeSelector field of a POD cannot be modified, we will have to
+    // // delete and recreate the existing POD with the new nodeSelector
+    // retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+    //     result, getErr := podsClient.Get(podname, metav1.GetOptions{})
+    //     if getErr != nil {
+    //         panic(fmt.Errorf("Failed to get latest version of Pod: %v", getErr))
+    //     }
+    //
+    //     fmt.Printf("Adding nodeSelector %v:%v to pod %v\n", labelkey, labelvalue, podname)
+    //
+    //     result.Spec.NodeName = labelkey
+    //     _, updateErr := podsClient.Update(result)
+    //     return updateErr
+    //
+    //     // Modify labels
+    //     if result.Spec.NodeSelector == nil {
+    //         result.Spec.NodeSelector = make(map[string]string)
+    //     }
+    //     result.Spec.NodeSelector[labelkey] = labelvalue
+    //
+    //     deleteErr := podsClient.Delete(podname, &metav1.DeleteOptions{})
+    //     if deleteErr != nil {
+    //         panic(fmt.Errorf("Failed to delete oldPod: %v", deleteErr))
+    //     }
+    //
+    //     _, createErr := podsClient.Create(result)
+    //     return createErr
+    // })
+    // if retryErr != nil {
+    //     panic(fmt.Errorf("Update failed: %v", retryErr))
+    // }
+    // fmt.Printf("Updated nodeSelectors of pod %v\n", podname)
 }
 
 func deleteNode(clientset *kubernetes.Clientset, nodename string) {
@@ -172,7 +205,7 @@ func main() {
     // Unit test for replicaUpdate
     testclient := getClientSetOut()
     //replicaUpdate(testclient, "frontend", "-1")
-    //addNodeLabel(testclient, "ip-172-20-38-51.us-west-1.compute.internal", "test", "8")
-    //addNodeSel(testclient, "frontend-1768566195-ct0qb", "ip-172-20-46-58.us-west-1.compute.internal", "8")
-    deleteNode(testclient, "ip-172-20-38-51.us-west-1.compute.internal")
+    //addNodeLabel(testclient, "ip-172-20-33-39.us-west-1.compute.internal", "test", "8")
+    addNodeSel(testclient, "frontend", "test", "8")
+    //deleteNode(testclient, "ip-172-20-38-51.us-west-1.compute.internal")
 }
