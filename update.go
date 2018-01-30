@@ -168,7 +168,7 @@ func main() {
     // Unit test for replicaUpdate
     testclient := getClientSetOut()
     //replicaUpdate(testclient, "frontend", "1")
-    addNodeLabel(testclient, "ip-172-20-51-48.us-west-1.compute.internal", "test", "8")
-    addNodeSel(testclient, "frontend", "test", "8")
-    //deleteNode(testclient, "ip-172-20-38-51.us-west-1.compute.internal")
+    //addNodeLabel(testclient, "ip-172-20-51-48.us-west-1.compute.internal", "test", "8")
+    //addNodeSel(testclient, "frontend", "test", "8")
+    deleteNode(testclient, "ip-172-20-51-48.us-west-1.compute.internal")
 }
