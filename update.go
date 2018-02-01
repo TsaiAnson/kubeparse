@@ -2,6 +2,7 @@ package main
 
 import (
     "fmt"
+    "errors"
     "strconv"
     "path/filepath"
 
@@ -162,6 +163,51 @@ func deleteNode(clientset *kubernetes.Clientset, nodename string) {
     fmt.Printf("Deleted node %v\n", nodename)
 }
 
+// Note that this function currently does not work: the containerPorts datastructure cannot be modified manually
+func addContainerPort(clientset *kubernetes.Clientset, deployment string, container string, port string) {
+    // Getting deployments
+    deploymentsClient := clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
+
+    // Updating deployment
+    retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+        // Retrieve the latest version of Deployment before attempting update
+        // RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
+        result, getErr := deploymentsClient.Get(deployment, metav1.GetOptions{})
+        if getErr != nil {
+            panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+        }
+
+        fmt.Printf("Adding containerPort %v to container %v of deployment %v\n", port, container, deployment)
+
+        // Parsing quantity to int32
+        i, err := strconv.ParseInt(port, 10, 32)
+        if err != nil {
+            panic(err)
+        }
+
+        // Add containerPort
+        fmt.Printf("%v\n", i)
+        found := 0
+        for _, element := range result.Spec.Template.Spec.Containers {
+            if element.Name == container {
+                found = 1
+                //element.Ports.Add(i)
+                fmt.Printf("%v\n", element.Ports)
+            }
+        }
+        if found == 0 {
+            return errors.New(fmt.Sprintf("Container %v not found", container))
+        }
+        //_, updateErr := deploymentsClient.Update(result)
+        //return updateErr
+        return nil
+    })
+    if retryErr != nil {
+        panic(fmt.Errorf("Update failed: %v", retryErr))
+    }
+    fmt.Printf("Added containerPort %v to container %v of deployment %v\n", port, container, deployment)
+}
+
 func int32Ptr(i int32) *int32 { return &i }
 
 func main() {
@@ -170,5 +216,6 @@ func main() {
     //replicaUpdate(testclient, "frontend", "1")
     //addNodeLabel(testclient, "ip-172-20-51-48.us-west-1.compute.internal", "test", "8")
     //addNodeSel(testclient, "frontend", "test", "8")
-    deleteNode(testclient, "ip-172-20-51-48.us-west-1.compute.internal")
+    //deleteNode(testclient, "ip-172-20-51-48.us-west-1.compute.internal")
+    addContainerPort(testclient, "frontend", "php-redis", "12345")
 }
